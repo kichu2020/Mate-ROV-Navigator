@@ -1,9 +1,7 @@
-
 #include <Servo.h>
 
-// Pin definitions forall thrusters and servos
 const byte thrusterPins[9] = {5, 10, 7, 9, 6, 8, 11, 12, 13};  
-Servo servos[9]; // All servos (thrusters + claw servos + camera)
+Servo servos[9]; 
 
 // Thruster mapping:
 // servos[0] = T1: Front Top (D5)
@@ -18,65 +16,56 @@ Servo servos[9]; // All servos (thrusters + claw servos + camera)
 
 void setup() {
     Serial.begin(9600);
-    Serial.setTimeout(10); // Set a short timeout for input processing
+    Serial.setTimeout(10); 
 
-    // Initialize all servos to neutral position
     for (int i = 0; i < 9; i++) {
         servos[i].attach(thrusterPins[i]);
-        servos[i].writeMicroseconds(1500);  // Neutral position
+        servos[i].writeMicroseconds(1500);  
     }
     
-    // Wait for ESCs to initialize
     delay(2000);
 }
 
 void loop() {
-    // Clear buffer on overflow to avoid processing stale commands
+
     if (Serial.available() > 100) {
         while(Serial.available()) Serial.read();
     }
     
-    // Only process if we have enough data for a complete command
-    if (Serial.available() > 12) { // Minimum expected data length
+   
+    if (Serial.available() > 12) { 
         String inputString = Serial.readStringUntil('\n');
         
-        // Use a more robust parsing method
-        int values[9] = {1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500}; // Default neutral
+        int values[9] = {1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500};
         
-        // Parse comma-separated values
         int commaIndex = 0;
         int valueIndex = 0;
         
         for (int i = 0; i < 9 && commaIndex >= 0 && valueIndex < inputString.length(); i++) {
             commaIndex = inputString.indexOf(',', valueIndex);
             if (commaIndex < 0 && i < 8) {
-                // Not enough values in string, use the last valid one
                 break;
             }
             
             String valStr;
-            if (commaIndex < 0) { // Last value
+            if (commaIndex < 0) {
                 valStr = inputString.substring(valueIndex);
             } else {
                 valStr = inputString.substring(valueIndex, commaIndex);
                 valueIndex = commaIndex + 1;
             }
             
-            // Convert to integer
             int val = valStr.toInt();
             
-            // Range checking (safety feature)
             if (val >= 1100 && val <= 1900) {
                 values[i] = val;
             }
         }
         
-        // Apply values to servos
         for (int i = 0; i < 9; i++) {
             servos[i].writeMicroseconds(values[i]);
         }
     }
     
-    // Small delay to prevent excessive CPU usage
     delay(10);
 }
